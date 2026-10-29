@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Movement 1.0</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .active-tab {
+            border-bottom: 3px solid #2563eb;
+            color: #2563eb;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans pb-32">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-50 flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i data-lucide="truck"></i> Stock Movement 1.0
+            </h1>
+            <p class="text-xs text-blue-100">Logistics & Dispatch Manager</p>
+        </div>
+        <button onclick="clearData()" class="text-xs bg-blue-700 hover:bg-blue-800 px-2 py-1 rounded border border-blue-400">
+            Reset Data
+        </button>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-4xl mx-auto p-4">
+
+        <!-- Tab 1: Dispatch Form -->
+        <section id="tab-dispatch" class="space-y-4">
+            <div class="bg-white p-5 rounded-lg shadow-sm">
+                <div class="flex justify-between items-center border-b pb-2 mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <i data-lucide="plus-circle" class="text-blue-600"></i> New Dispatch Entry
+                    </h2>
+                    <!-- Quick Jump Button for Mobile -->
+                    <button type="button" onclick="document.getElementById('product-section').scrollIntoView({behavior: 'smooth'})" class="text-xs bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded-md font-medium">
+                        ↓ Jump to Products
+                    </button>
+                </div>
+                
+                <form id="dispatchForm" onsubmit="handleDispatch(event)" class="space-y-4">
+                    <!-- Origin & Destination -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Origin</label>
+                            <select id="origin" required class="w-full p-2.5 border rounded-md text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select Origin...</option>
+                                <option value="BAS Plant">BAS Plant</option>
+                                <option value="Overberg Trusses">Overberg Trusses</option>
+                                <option value="Branch - Gansbaai">Branch - Gansbaai</option>
+                                <option value="Branch - Hermanus">Branch - Hermanus</option>
+                                <option value="Branch - Bredasdorp">Branch - Bredasdorp</option>
+                                <option value="Branch - Struisbaai">Branch - Struisbaai</option>
+                                <option value="Bredasdorp Claybrick Site">Bredasdorp Claybrick Site</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Destination</label>
+                            <input type="text" id="destination" required placeholder="Branch, Civils Site, Customer..." class="w-full p-2.5 border rounded-md text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Fleet & Driver -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Hauler Type</label>
+                            <select id="haulerType" required class="w-full p-2.5 border rounded-md text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500">
+                                <option value="Internal Fleet">Internal Fleet (Isuzu)</option>
+                                <option value="Subcontractor">Subcontractor Rig</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Vehicle Reg / Fleet ID</label>
+                            <input type="text" id="vehicleId" required placeholder="e.g. CA 123-456" class="w-full p-2.5 border rounded-md text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Driver Name</label>
+                            <input type="text" id="driver" required placeholder="Driver Name" class="w-full p-2.5 border rounded-md text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Product Entry -->
+                    <div id="product-section" class="border-t pt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-xs font-semibold text-gray-600 uppercase">Product & Load Details</label>
+                            <label class="inline-flex items-center text-xs font-medium text-amber-600 cursor-pointer">
+                                <input type="checkbox" id="weightPending" onchange="toggleWeightPending(this)" class="mr-1 rounded border-amber-400 text-amber-600 focus:ring-amber-500">
+                                Weight Pending (Unlisted / External)
+                            </label>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3 rounded-md border">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Product</label>
+                                <select id="productSelect" onchange="updateCalc()" class="w-full p-2 border rounded text-sm bg-white">
+                                    <option value="BAS Blocks (Std)" data-weight="14.5">BAS Blocks (14.5 kg/unit)</option>
+                                    <option value="BAS Pavers (Std)" data-weight="3.2">BAS Pavers (3.2 kg/unit)</option>
+                                    <option value="Lintel Bundles" data-weight="250">Lintel Bundles (250 kg/bdl)</option>
+                                    <option value="Bredasdorp Claybrick" data-weight="3.0">Bredasdorp Claybrick (3.0 kg/unit)</option>
+                                    <option value="Claytile" data-weight="3.5">Claytile (3.5 kg/unit)</option>
+                                    <option value="Corobrick" data-weight="3.2">Corobrick (3.2 kg/unit)</option>
+                                    <option value="Custom / Unlisted" data-weight="0">Custom / Unlisted Item</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Quantity (Units/Pallets)</label>
+                                <input type="number" id="quantity" value="1" min="1" oninput="updateCalc()" class="w-full p-2 border rounded text-sm bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Total Weight (Tons)</label>
+                                <input type="number" step="0.01" id="calcWeight" placeholder="0.00" class="w-full p-2 border rounded text-sm bg-white font-bold text-gray-800">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-md shadow hover:bg-blue-700 transition duration-200 flex justify-center items-center gap-2 mt-4">
+                        <i data-lucide="check-circle"></i> Complete & Log Dispatch
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Tab 2: Ledger -->
+        <section id="tab-ledger" class="space-y-4 hidden">
+            <div class="bg-white p-5 rounded-lg shadow-sm">
+                <div class="flex justify-between items-center border-b pb-3 mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <i data-lucide="list" class="text-blue-600"></i> Dispatch Ledger
+                    </h2>
+                    <button onclick="exportCSV()" class="text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 flex items-center gap-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-gray-600">
+                        <thead class="bg-gray-100 uppercase text-gray-500 border-b">
+                            <tr>
+                                <th class="p-2.5">Date</th>
+                                <th class="p-2.5">Origin -> Dest</th>
+                                <th class="p-2.5">Driver / Reg</th>
+                                <th class="p-2.5">Product</th>
+                                <th class="p-2.5 text-right">Tons</th>
+                                <th class="p-2.5 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledgerBody" class="divide-y">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 3: Reports -->
+        <section id="tab-reports" class="space-y-4 hidden">
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-600">
+                    <p class="text-xs text-gray-500 font-semibold uppercase">Total Tonnage</p>
+                    <p id="stat-tons" class="text-2xl font-bold text-gray-800">0.00 t</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-600">
+                    <p class="text-xs text-gray-500 font-semibold uppercase">Dispatches</p>
+                    <p id="stat-count" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-amber-500">
+                    <p class="text-xs text-gray-500 font-semibold uppercase">Pending Weight</p>
+                    <p id="stat-pending" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-600">
+                    <p class="text-xs text-gray-500 font-semibold uppercase">Subcontractors</p>
+                    <p id="stat-sub" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="bg-white p-5 rounded-lg shadow-sm">
+                <h3 class="text-sm font-semibold text-gray-700 mb-4">Tonnage by Destination</h3>
+                <div class="w-full h-64">
+                    <canvas id="destChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Mobile Nav -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-2 z-50">
+        <button onclick="switchTab('dispatch')" id="btn-dispatch" class="flex flex-col items-center text-xs font-medium active-tab py-1">
+            <i data-lucide="plus-circle" class="w-5 h-5 mb-0.5"></i>
+            Dispatch
+        </button>
+        <button onclick="switchTab('ledger')" id="btn-ledger" class="flex flex-col items-center text-xs font-medium text-gray-500 py-1">
+            <i data-lucide="list" class="w-5 h-5 mb-0.5"></i>
+            Ledger
+        </button>
+        <button onclick="switchTab('reports')" id="btn-reports" class="flex flex-col items-center text-xs font-medium text-gray-500 py-1">
+            <i data-lucide="bar-chart-3" class="w-5 h-5 mb-0.5"></i>
+            Reports
+        </button>
+    </nav>
+
+    <script>
+        // Init Lucide Icons
+        lucide.createIcons();
+
+        // Local Storage State
+        let dispatches = JSON.parse(localStorage.getItem('stock_dispatches')) || [];
+        let chartInstance = null;
+
+        // Auto Calc Weight
+        function updateCalc() {
+            const isPending = document.getElementById('weightPending').checked;
+            if (isPending) return;
+
+            const select = document.getElementById('productSelect');
+            const unitWeight = parseFloat(select.options[select.selectedIndex].dataset.weight || 0);
+            const qty = parseFloat(document.getElementById('quantity').value || 0);
+            
+            const totalTons = (unitWeight * qty) / 1000;
+            document.getElementById('calcWeight').value = totalTons ? totalTons.toFixed(2) : '';
+        }
+
+        function toggleWeightPending(checkbox) {
+            const weightInput = document.getElementById('calcWeight');
+            if (checkbox.checked) {
+                weightInput.value = '';
+                weightInput.placeholder = 'Pending';
+            } else {
+                weightInput.placeholder = '0.00';
+                updateCalc();
+            }
+        }
+
+        // Handle Form Submit
+        function handleDispatch(e) {
+            e.preventDefault();
+
+            const isPending = document.getElementById('weightPending').checked;
+            const entry = {
+                id: Date.now(),
+                date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+                origin: document.getElementById('origin').value,
+                destination: document.getElementById('destination').value,
+                haulerType: document.getElementById('haulerType').value,
+                vehicleId: document.getElementById('vehicleId').value,
+                driver: document.getElementById('driver').value,
+                product: document.getElementById('productSelect').value,
+                quantity: document.getElementById('quantity').value,
+                weight: isPending ? 0 : parseFloat(document.getElementById('calcWeight').value || 0),
+                isPending: isPending
+            };
+
+            dispatches.unshift(entry);
+            localStorage.setItem('stock_dispatches', JSON.stringify(dispatches));
+            
+            // Reset form
+            document.getElementById('dispatchForm').reset();
+            updateCalc();
+            
+            alert('Dispatch successfully logged!');
+            switchTab('ledger');
+        }
+
+        // Render Ledger
+        function renderLedger() {
+            const tbody = document.getElementById('ledgerBody');
+            tbody.innerHTML = '';
+
+            if (dispatches.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-400">No dispatches recorded yet.</td></tr>`;
+                return;
+            }
+
+            dispatches.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50";
+                tr.innerHTML = `
+                    <td class="p-2.5 font-mono text-gray-500">${d.date}</td>
+                    <td class="p-2.5 font-medium text-gray-800">${d.origin} <span class="text-blue-500">→</span> ${d.destination}</td>
+                    <td class="p-2.5">${d.driver} <span class="text-gray-400">(${d.vehicleId})</span></td>
+                    <td class="p-2.5">${d.product} (x${d.quantity})</td>
+                    <td class="p-2.5 text-right font-bold text-gray-700">${d.isPending ? '-' : d.weight.toFixed(2) + ' t'}</td>
+                    <td class="p-2.5 text-center">
+                        ${d.isPending 
+                            ? `<span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-semibold">Pending</span>` 
+                            : `<span class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded-full font-semibold">Done</span>`}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Render Reports & Chart
+        function renderReports() {
+            const totalTons = dispatches.reduce((acc, curr) => acc + curr.weight, 0);
+            const totalCount = dispatches.length;
+            const pendingCount = dispatches.filter(d => d.isPending).length;
+            const subCount = dispatches.filter(d => d.haulerType === 'Subcontractor').length;
+
+            document.getElementById('stat-tons').innerText = totalTons.toFixed(2) + ' t';
+            document.getElementById('stat-count').innerText = totalCount;
+            document.getElementById('stat-pending').innerText = pendingCount;
+            document.getElementById('stat-sub').innerText = subCount;
+
+            // Group tonnage by destination
+            const destMap = {};
+            dispatches.forEach(d => {
+                destMap[d.destination] = (destMap[d.destination] || 0) + d.weight;
+            });
+
+            const labels = Object.keys(destMap);
+            const data = Object.values(destMap);
+
+            const ctx = document.getElementById('destChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.length ? labels : ['No Data'],
+                    datasets: [{
+                        label: 'Tonnage (Tons)',
+                        data: data.length ? data : [0],
+                        backgroundColor: '#2563eb',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // Switch Tabs
+        function switchTab(tabName) {
+            ['dispatch', 'ledger', 'reports'].forEach(tab => {
+                document.getElementById(`tab-${tab}`).classList.add('hidden');
+                document.getElementById(`btn-${tab}`).classList.remove('active-tab');
+                document.getElementById(`btn-${tab}`).classList.add('text-gray-500');
+            });
+
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.getElementById(`btn-${tabName}`).classList.add('active-tab');
+            document.getElementById(`btn-${tabName}`).classList.remove('text-gray-500');
+
+            if (tabName === 'ledger') renderLedger();
+            if (tabName === 'reports') renderReports();
+        }
+
+        // CSV Export
+        function exportCSV() {
+            if (!dispatches.length) return alert('No data to export.');
+            
+            let csv = 'ID,Date,Origin,Destination,Hauler,Vehicle,Driver,Product,Quantity,Weight_Tons,Status\n';
+            dispatches.forEach(d => {
+                
